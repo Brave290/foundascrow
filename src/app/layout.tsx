@@ -3,6 +3,7 @@ import { Prata, Montserrat } from 'next/font/google'
 import './globals.css'
 import { Navbar } from '@/components/site/navbar'
 import { Footer } from '@/components/site/footer'
+import { Preloader } from '@/components/site/preloader'
 
 const prata = Prata({ subsets: ['latin'], weight: '400', variable: '--font-prata' })
 const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-montserrat' })
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className="dark">
       <body className={`${prata.variable} ${montserrat.variable} font-sans antialiased`}>
+        <Preloader />
         <Navbar />
         <div className="pt-16">{children}</div>
         <Footer />

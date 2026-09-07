@@ -4,30 +4,30 @@ import { ShieldCheck, PackageCheck, Undo2 } from 'lucide-react'
 export default function Home() {
   return (
     <main className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-16">
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-3 fade-in-up">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo.webp" alt="FoundaScrow" className="size-14 rounded-full object-contain" />
         <p className="font-display text-2xl text-foreground">FoundaScrow</p>
       </div>
 
-      <h1 className="mt-10 max-w-2xl text-center font-display text-4xl leading-tight text-foreground sm:text-5xl">
+      <h1 className="mt-10 max-w-2xl text-center font-display text-4xl leading-tight text-foreground sm:text-5xl fade-in-up fade-in-up-delay-1">
         Buy and sell without fear.
       </h1>
-      <p className="mt-4 max-w-xl text-center text-sm leading-relaxed text-muted-foreground">
+      <p className="mt-4 max-w-xl text-center text-sm leading-relaxed text-muted-foreground fade-in-up fade-in-up-delay-2">
         The buyer pays into a secure vault. The seller ships. The money moves
         only when the buyer confirms delivery. No stories, no losses.
       </p>
 
-      <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+      <div className="mt-8 flex flex-col gap-3 sm:flex-row fade-in-up fade-in-up-delay-3">
         <Link
           href="/links/new"
-          className="rounded-full bg-primary px-6 py-3 text-center text-sm font-semibold text-primary-foreground transition-transform hover:-translate-y-0.5"
+          className="rounded-full bg-primary px-6 py-3 text-center text-sm font-semibold text-primary-foreground hover-lift"
         >
           I am a seller — create payment link
         </Link>
         <Link
           href="/track"
-          className="rounded-full border border-border bg-card px-6 py-3 text-center text-sm font-semibold text-foreground transition-transform hover:-translate-y-0.5"
+          className="rounded-full border border-border bg-card px-6 py-3 text-center text-sm font-semibold text-foreground hover-lift"
         >
           I am a buyer — track my payment
         </Link>
@@ -38,8 +38,11 @@ export default function Home() {
           { icon: ShieldCheck, title: 'Held in vault', text: 'Money is locked until delivery.' },
           { icon: PackageCheck, title: 'Released on confirm', text: 'Seller paid when buyer says "I got it".' },
           { icon: Undo2, title: 'Refund if it goes south', text: 'Disputes return money to the buyer.' },
-        ].map((f) => (
-          <div key={f.title} className="rounded-xl border border-border bg-card p-4 text-center">
+        ].map((f, i) => (
+          <div
+            key={f.title}
+            className={`rounded-xl border border-border bg-card p-4 text-center card-hover fade-in-up fade-in-up-delay-${i + 1}`}
+          >
             <f.icon className="mx-auto size-5 text-primary" />
             <p className="mt-2 text-sm font-semibold text-foreground">{f.title}</p>
             <p className="mt-1 text-xs text-muted-foreground">{f.text}</p>
