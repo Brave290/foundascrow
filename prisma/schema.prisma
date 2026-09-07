@@ -1,1 +1,336 @@
-404: Not Found
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Environment {
+  test
+  live
+}
+
+enum EscrowStatus {
+  pending
+  funded
+  held
+  delivery_pending
+  delivery_verified
+  released
+  refunded
+  cancelled
+  disputed
+  failed
+}
+
+enum LedgerEntryType {
+  debit
+  credit
+}
+
+enum LedgerAccount {
+  buyer_pending
+  escrow_liability
+  merchant_payable
+  platform_revenue
+  refund_payable
+}
+
+enum WebhookEventStatus {
+  pending
+  delivered
+  failed
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String?
+  email     String   @unique
+  password  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  memberships OrganizationMember[]
+}
+
+model Organization {
+  id          String      @id @default(cuid())
+  name        String
+  slug        String      @unique
+  email       String?
+  environment Environment @default(test)
+  totpSecret     String?
+  totpEnabled    Boolean  @default(false)
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  members  OrganizationMember[]
+  apiKeys  ApiKey[]
+  escrows  Escrow[]
+  webhooks WebhookEndpoint[]
+}
+
+model OrganizationMember {
+  id             String @id @default(cuid())
+  userId         String
+  organizationId String
+  role           String @default("owner")
+  createdAt      DateTime @default(now())
+
+  user         User         @relation(fields: [userId], references: [id])
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@unique([userId, organizationId])
+}
+
+model ApiKey {
+  id             String      @id @default(cuid())
+  organizationId String
+  name           String
+  keyHash        String      @unique
+  prefix         String
+  environment    Environment @default(test)
+  lastUsedAt     DateTime?
+  scope          String   @default("full")
+  encryptedKey   String?
+  ipAllowlist    String?
+  revokedAt      DateTime?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  @@index([organizationId])
+}
+
+model Escrow {
+  id                 String       @id @default(cuid())
+  organizationId     String
+  reference          String       @unique
+  title              String
+  description        String?
+  buyerName          String?
+  buyerEmail         String?
+  buyerPhone         String?
+  merchantName       String?
+  merchantEmail      String?
+  amount             Decimal      @db.Decimal(18, 2)
+  currency           String       @default("NGN")
+  fee                Decimal      @db.Decimal(18, 2) @default(0)
+  releasedAmount     Decimal      @db.Decimal(18, 2) @default(0)
+  status             EscrowStatus @default(pending)
+  metadata           Json?
+  fundedAt           DateTime?
+  heldAt             DateTime?
+  deliveryVerifiedAt DateTime?
+  releasedAt         DateTime?
+  refundedAt         DateTime?
+  cancelledAt        DateTime?
+  createdAt          DateTime     @default(now())
+  updatedAt          DateTime     @updatedAt
+
+  organization  Organization  @relation(fields: [organizationId], references: [id])
+  ledgerEntries LedgerEntry[]
+  disputes      Dispute[]
+  auditLogs     AuditLog[]
+
+  @@index([organizationId])
+  @@index([status])
+}
+
+model LedgerEntry {
+  id          String          @id @default(cuid())
+  escrowId    String
+  type        LedgerEntryType
+  account     LedgerAccount
+  amount      Decimal         @db.Decimal(18, 2)
+  currency    String          @default("NGN")
+  description String?
+  metadata    Json?
+  createdAt   DateTime        @default(now())
+
+  escrow Escrow @relation(fields: [escrowId], references: [id])
+
+  @@index([escrowId])
+  @@index([account])
+}
+
+model Dispute {
+  id             String   @id @default(cuid())
+  raisedBy       String
+  escrowId       String
+  escrow         Escrow   @relation(fields: [escrowId], references: [id])
+  reason         String
+  evidence       String?
+  status         String   @default("open")
+  resolution     String?
+  resolvedAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+
+
+model WebhookEndpoint {
+  id             String   @id @default(cuid())
+  organizationId String
+  url            String
+  secret         String
+  active         Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization   @relation(fields: [organizationId], references: [id])
+  events       WebhookEvent[]
+
+  @@index([organizationId])
+}
+
+model WebhookEvent {
+  id         String             @id @default(cuid())
+  endpointId String
+  eventType  String
+  payload    Json
+  status     WebhookEventStatus @default(pending)
+  attempts   Int                @default(0)
+  lastError  String?
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+
+  endpoint WebhookEndpoint @relation(fields: [endpointId], references: [id])
+
+  @@index([endpointId])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  escrowId  String?
+  actor     String?
+  action    String
+  oldValue  Json?
+  newValue  Json?
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  escrow Escrow? @relation(fields: [escrowId], references: [id])
+
+  @@index([escrowId])
+}
+
+model Lead {
+  id             String   @id @default(cuid())
+  name           String
+  email          String
+  company        String
+  message        String?
+  securityScore  Int      @default(0)
+  status         String   @default("new")
+  organizationId String?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([status])
+}
+
+model PlatformSetting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
+
+model Session {
+  id             String    @id @default(cuid())
+  tokenHash      String    @unique
+  organizationId String
+  apiKeyId       String
+  ip             String?
+  userAgent      String?
+  createdAt      DateTime  @default(now())
+  lastSeenAt     DateTime  @default(now())
+  revokedAt      DateTime?
+
+  @@index([organizationId])
+}
+
+model Notification {
+  id             String   @id @default(cuid())
+  organizationId String
+  type           String
+  title          String
+  message        String
+  read           Boolean  @default(false)
+  metadata       Json?
+  createdAt      DateTime @default(now())
+}
+
+model CronRun {
+  id             String   @id @default(cuid())
+  job            String
+  status         String
+  duration       Int?
+  error          String?
+  triggeredBy    String
+  ranAt          DateTime @default(now())
+}
+
+model ApiUsage {
+  id             String   @id @default(cuid())
+  apiKeyId       String
+  endpoint       String
+  count          Int      @default(1)
+  day            String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([apiKeyId, endpoint, day])
+}
+
+model IdempotencyRecord {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  requestHash String
+  status      Int
+  body        Json
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  @@index([expiresAt])
+}
+
+model RateLimitBucket {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  count       Int      @default(0)
+  windowStart DateTime
+  updatedAt   DateTime @updatedAt
+
+  @@index([windowStart])
+}
+
+model PaymentEvent {
+  id          String    @id @default(cuid())
+  provider    String
+  eventKey    String    @unique
+  eventType   String
+  payload     Json
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([provider, eventType])
+}
+
+model AdminSession {
+  id        String    @id @default(cuid())
+  tokenHash String    @unique
+  ip        String?
+  userAgent String?
+  createdAt DateTime  @default(now())
+  expiresAt DateTime
+  revokedAt DateTime?
+
+  @@index([expiresAt])
+}
