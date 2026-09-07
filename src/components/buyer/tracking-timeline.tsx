@@ -18,7 +18,7 @@ type Escrow = {
   amount: string
   fee: string
   status: string
-  metadata?: { itemType?: string; deliveryDetails?: string; files?: VaultFile[] } | null
+  metadata?: any
 }
 
 const ngn = (n: number) => n.toLocaleString('en-NG')
@@ -55,35 +55,6 @@ export function TrackingTimeline({ reference }: { reference: string }) {
     return () => clearInterval(t)
   }, [load])
 
-  // While pending: sweep Paystack every 20s so a paid-but-unconfirmed order self-heals
-  useEffect(() => {
-    if (!escrow || escrow.status !== 'pending') return
-    const t = setInterval(() => {
-      reconcileNow()
-        .then((funded) => { if (funded) load().catch(() => {}) })
-        .catch(() => {})
-    }, 20000)
-    return () => clearInterval(t)
-  }, [escrow?.status, reference, load])
-
-
-  async function checkPayment() {
-    if (!escrow || escrow.status !== 'pending') return
-    setChecking(true)
-    const meta: any = escrow.metadata ?? {}
-    const attempts = (meta.paymentAttempts as any[]) ?? []
-    const lastAttempt = attempts[attempts.length - 1]
-    if (lastAttempt?.psRef) {
-      await fetch('/api/pay/verify', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ reference: lastAttempt.psRef, escrowRef: escrow.reference, buyerEmail: meta.buyerEmail }),
-      }).catch(() => {})
-      await load().catch(() => {})
-    }
-    setChecking(false)
-  }
-
   async function reconcileNow(): Promise<boolean> {
     const res = await fetch('/api/pay/reconcile', {
       method: 'POST',
@@ -107,6 +78,17 @@ export function TrackingTimeline({ reference }: { reference: string }) {
     await load().catch((e) => setError(e.message))
     setRefreshing(false)
   }
+
+  // While pending: sweep Paystack every 20s so a paid-but-unconfirmed order self-heals
+  useEffect(() => {
+    if (!escrow || escrow.status !== 'pending') return
+    const t = setInterval(() => {
+      reconcileNow()
+        .then((funded) => { if (funded) load().catch(() => {}) })
+        .catch(() => {})
+    }, 20000)
+    return () => clearInterval(t)
+  }, [escrow?.status, reference, load])
 
   async function confirmReceipt() {
     setBusy(true)
@@ -162,11 +144,13 @@ export function TrackingTimeline({ reference }: { reference: string }) {
 
   const funded = escrow.status === 'held' || escrow.status === 'released'
   const delivered = escrow.status === 'released'
-  const isDigital = escrow.metadata?.itemType === 'digital'
-  const details = escrow.metadata?.deliveryDetails ?? ''
-  const files = escrow.metadata?.files ?? []
+  const metadata: any = escrow.metadata ?? {}
+  const isDigital = metadata.itemType === 'digital'
+  const details = metadata.deliveryDetails ?? ''
+  const files = metadata.files ?? []
   const total = Number(escrow.amount) + Number(escrow.fee)
   const meta = STATUS_META[escrow.status] ?? STATUS_META.pending
+  const lastAttempt = metadata.lastAttempt as { status?: string } | undefined
 
   const steps = [
     { label: 'Payment received', sub: 'Buyer paid via Paystack', done: funded, icon: CheckCircle2 },
@@ -207,7 +191,7 @@ export function TrackingTimeline({ reference }: { reference: string }) {
           >
             <CreditCard className="size-4" /> Pay ₦{ngn(total)} now — held in vault till delivery
           </Link>
-          {escrow.metadata?.lastAttempt && (
+          {lastAttempt && lastAttempt.status && lastAttempt.status !== 'success' && (
             <button
               type="button"
               onClick={checkPayment}
