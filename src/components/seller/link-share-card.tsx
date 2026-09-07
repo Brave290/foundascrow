@@ -59,7 +59,7 @@ export function LinkShareCard({ reference }: { reference: string }) {
         <div className="rounded-lg border border-primary/30 bg-primary/10 p-4">
           <p className="text-sm text-foreground">
             <strong>Next step:</strong> Send this link to your buyer via WhatsApp,
-            SMS, or email. When they pay, you'll get an email notification.
+            SMS, or email. When they pay, you&apos;ll get an email notification.
           </p>
         </div>
       </CardContent>

@@ -38,8 +38,8 @@ export function CreateLinkForm() {
       
       const { reference } = await res.json()
       router.push(`/links/${reference}`)
-    } catch (err: any) {
-      setError(err.message)
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to create payment link')
       setLoading(false)
     }
   }
@@ -58,7 +58,7 @@ export function CreateLinkForm() {
               required
             />
             <p className="text-xs text-muted-foreground">
-              We'll send you updates when the payment arrives
+              We&apos;ll send you updates when the payment arrives
             </p>
           </div>
           

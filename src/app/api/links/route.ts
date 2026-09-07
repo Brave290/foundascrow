@@ -46,10 +46,11 @@ export async function POST(request: Request) {
       reference: escrow.reference,
       id: escrow.id,
     })
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Create link error:', error)
+    const message = error instanceof Error ? error.message : 'Failed to create link'
     return NextResponse.json(
-      { error: error.message || 'Failed to create link' },
+      { error: message },
       { status: 500 }
     )
   }

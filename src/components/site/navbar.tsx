@@ -12,10 +12,7 @@ const links = [
 export function Navbar() {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
-  const [mounted, setMounted] = useState(false)
-
   useEffect(() => {
-    setMounted(true)
     const onScroll = () => setScrolled(window.scrollY > 8)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -47,7 +44,7 @@ export function Navbar() {
             {/* Founda Technologies badge - slides in */}
             <div
               className={`hidden items-center rounded-full border border-border bg-card px-3 py-1 sm:flex ${
-                mounted ? 'animate-slide-in' : 'opacity-0'
+                'animate-slide-in'
               }`}
             >
               <span className="text-[10px] font-medium tracking-wide text-muted-foreground">
