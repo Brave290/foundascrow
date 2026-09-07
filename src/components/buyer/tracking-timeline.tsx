@@ -9,6 +9,7 @@ import {
   Copy, Check, RefreshCw, Download, CreditCard, Loader2,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { BrandSpinner } from '@/components/site/brand-spinner'
 
 type VaultFile = { path: string; name: string; size: number; type: string }
 type Escrow = {
