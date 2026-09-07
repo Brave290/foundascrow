@@ -9,7 +9,7 @@ import { Copy, Check, XCircle, Clock } from 'lucide-react'
 function Inner() {
   const router = useRouter()
   const params = useSearchParams()
-  const [state, setState] = useState<'verifying' | 'failed' | 'abandoned'>('verifying')
+  const [state, setState] = useState<'verifying' | 'failed' | 'abandoned' | 'unknown'>('verifying')
   const [copied, setCopied] = useState(false)
   const escrowRef = params.get('ref') || ''
   const psRef = params.get('reference') || params.get('trxref') || ''
@@ -44,7 +44,7 @@ function Inner() {
         }
         await new Promise((r) => setTimeout(r, 2500))
       }
-      router.replace(`/track/${escrowRef || psRef}`)
+      setState('unknown')
     }
     run()
     return () => {
@@ -73,12 +73,14 @@ function Inner() {
     <main className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 text-center">
       {failed ? <XCircle className="size-16 text-destructive" /> : <Clock className="size-16 text-primary" />}
       <h1 className="mt-6 font-display text-2xl font-bold text-foreground">
-        {failed ? 'Payment failed' : 'Payment not completed'}
+        {failed ? 'Payment failed' : state === 'unknown' ? 'Still confirming...' : 'Transaction aborted'}
       </h1>
       <p className="mt-2 max-w-sm text-sm text-muted-foreground">
         {failed
           ? 'Paystack reported this attempt as failed. No money left your account, and your order link is still active.'
-          : 'You closed the checkout before finishing. No money left your account — the item is still reserved for you.'}
+          : state === 'unknown'
+            ? 'We are still confirming this transaction with Paystack. If you completed payment, your order page will update shortly.'
+            : 'You aborted this transaction by closing the checkout before completing payment. No money left your account — your order link is still active.'}
       </p>
       <p className="mt-4 font-mono text-xs text-muted-foreground">{escrowRef}</p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
@@ -94,7 +96,9 @@ function Inner() {
           View order
         </Link>
       </div>
-      <p className="mt-6 text-[10px] text-muted-foreground/60">A follow-up email with your resume link is on its way.</p>
+      {state !== 'unknown' && (
+        <p className="mt-6 text-[10px] text-muted-foreground/60">A follow-up email with your resume link is on its way.</p>
+      )}
     </main>
   )
 }

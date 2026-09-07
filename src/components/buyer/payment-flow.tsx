@@ -80,6 +80,7 @@ export function PaymentFlow({ reference }: { reference: string }) {
   const fee = Number(escrow.fee) > 0 ? Number(escrow.fee) : Math.round(price * 0.02)
   const total = price + fee
   const alreadyPaid = escrow.status !== 'pending'
+  const lastAttempt = (escrow as any).metadata?.lastAttempt as { status?: string } | undefined
 
   return (
     <motion.div className="mx-auto w-full max-w-xl space-y-6" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
@@ -105,6 +106,13 @@ export function PaymentFlow({ reference }: { reference: string }) {
 
           {!alreadyPaid ? (
             <>
+              {lastAttempt && lastAttempt.status && lastAttempt.status !== 'success' && (
+                <div className={`rounded-xl border p-3 text-xs ${lastAttempt.status === 'failed' ? 'border-destructive/50 bg-destructive/10 text-destructive' : 'border-primary/40 bg-primary/10 text-primary'}`}>
+                  {lastAttempt.status === 'failed'
+                    ? 'Your previous payment attempt failed. No money left your account — you can safely retry below.'
+                    : 'Your previous payment attempt was aborted before completion. No money left your account — you can safely retry below.'}
+                </div>
+              )}
               <div className="space-y-2 pt-2">
                 <Label htmlFor="buyerEmail">Your email (receipt + updates)</Label>
                 <Input id="buyerEmail" type="email" value={buyerEmail} onChange={(e) => setBuyerEmail(e.target.value)} placeholder="buyer@example.com" disabled={paying} />

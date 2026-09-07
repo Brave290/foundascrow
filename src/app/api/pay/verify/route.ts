@@ -16,7 +16,19 @@ export async function POST(request: Request) {
     })
     const data = await ps.json().catch(() => null)
     const status = data?.data?.status ?? 'unknown'
-    if (status !== 'success') return NextResponse.json({ success: false, status })
+    if (status !== 'success') {
+      const lookup0 = escrowRef || ((data?.data?.metadata as any)?.escrowReference as string) || ''
+      if (lookup0) {
+        const e0 = await prisma.escrow.findFirst({ where: { reference: lookup0 } }).catch(() => null)
+        if (e0 && e0.status === 'pending') {
+          const m0: any = e0.metadata ?? {}
+          await prisma.escrow
+            .update({ where: { id: e0.id }, data: { metadata: { ...m0, lastAttempt: { status, at: new Date().toISOString(), psRef: reference } } } })
+            .catch(() => {})
+        }
+      }
+      return NextResponse.json({ success: false, status })
+    }
 
     const lookup = escrowRef || (data?.data?.metadata?.escrowReference as string) || ''
     const escrow = lookup ? await prisma.escrow.findFirst({ where: { reference: lookup } }) : null
