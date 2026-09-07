@@ -12,8 +12,10 @@ const links = [
 export function Navbar() {
   const [open, setOpen] = useState(false)
   const [scrolled, setScrolled] = useState(false)
+  const [mounted, setMounted] = useState(false)
 
   useEffect(() => {
+    setMounted(true)
     const onScroll = () => setScrolled(window.scrollY > 8)
     onScroll()
     window.addEventListener('scroll', onScroll, { passive: true })
@@ -35,11 +37,24 @@ export function Navbar() {
         }`}
       >
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 sm:px-6">
-          <Link href="/" className="flex items-center gap-2.5" aria-label="FoundaScrow home">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="" className="size-9 rounded-full" />
-            <span className="font-display text-lg text-foreground">FoundaScrow</span>
-          </Link>
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-2.5" aria-label="FoundaScrow home">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/logo.png" alt="" className="size-9 rounded-full" />
+              <span className="font-display text-lg text-foreground">FoundaScrow</span>
+            </Link>
+            
+            {/* Founda Technologies badge - slides in */}
+            <div
+              className={`hidden items-center rounded-full border border-border bg-card px-3 py-1 sm:flex ${
+                mounted ? 'animate-slide-in' : 'opacity-0'
+              }`}
+            >
+              <span className="text-[10px] font-medium tracking-wide text-muted-foreground">
+                Founda Technologies
+              </span>
+            </div>
+          </div>
 
           <nav className="hidden items-center gap-1 md:flex" aria-label="Primary">
             {links.map((l) =>
@@ -107,6 +122,11 @@ export function Navbar() {
         aria-hidden={!open}
       >
         <nav className="flex h-full flex-col items-center justify-center gap-6 px-6">
+          <div className="mb-4 rounded-full border border-border bg-card px-4 py-2">
+            <span className="text-xs font-medium tracking-wide text-muted-foreground">
+              Founda Technologies
+            </span>
+          </div>
           {links.map((l) =>
             l.external ? (
               <a
