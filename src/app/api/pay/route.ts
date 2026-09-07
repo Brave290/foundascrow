@@ -34,6 +34,12 @@ export async function POST(request: Request) {
     })
     const data = await ps.json().catch(() => null)
     if (!ps.ok || !data?.data?.authorization_url) return NextResponse.json({ error: data?.message || 'Paystack refused the charge' }, { status: 502 })
+    const metaNow: any = escrow.metadata ?? {}
+    const attempts = Array.isArray(metaNow.paymentAttempts) ? metaNow.paymentAttempts : []
+    attempts.push({ psRef, at: new Date().toISOString() })
+    await prisma.escrow
+      .update({ where: { id: escrow.id }, data: { metadata: { ...metaNow, paymentAttempts: attempts.slice(-10), lastAttempt: { status: 'initialized', psRef, at: new Date().toISOString() } } } })
+      .catch(() => {})
     return NextResponse.json({ authorizationUrl: data.data.authorization_url })
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Payment init failed' }, { status: 500 })

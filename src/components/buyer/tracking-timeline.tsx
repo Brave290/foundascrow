@@ -54,6 +54,17 @@ export function TrackingTimeline({ reference }: { reference: string }) {
     return () => clearInterval(t)
   }, [load])
 
+  // While pending: sweep Paystack every 20s so a paid-but-unconfirmed order self-heals
+  useEffect(() => {
+    if (!escrow || escrow.status !== 'pending') return
+    const t = setInterval(() => {
+      reconcileNow()
+        .then((funded) => { if (funded) load().catch(() => {}) })
+        .catch(() => {})
+    }, 20000)
+    return () => clearInterval(t)
+  }, [escrow?.status, reference, load])
+
 
   async function checkPayment() {
     if (!escrow || escrow.status !== 'pending') return
@@ -70,6 +81,24 @@ export function TrackingTimeline({ reference }: { reference: string }) {
       await load().catch(() => {})
     }
     setChecking(false)
+  }
+
+  async function reconcileNow(): Promise<boolean> {
+    const res = await fetch('/api/pay/reconcile', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ reference }),
+    })
+    const d = await res.json().catch(() => null)
+    return !!d?.funded
+  }
+
+  async function checkPayment() {
+    setChecking(true)
+    const funded = await reconcileNow().catch(() => false)
+    await load().catch(() => {})
+    setChecking(false)
+    if (!funded) setError('')
   }
 
   async function refresh() {
