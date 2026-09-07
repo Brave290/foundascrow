@@ -1,12 +1,12 @@
 import type { Metadata } from 'next'
-import { Prata, Montserrat } from 'next/font/google'
+import { Sora, Manrope } from 'next/font/google'
 import './globals.css'
 import { Navbar } from '@/components/site/navbar'
 import { Footer } from '@/components/site/footer'
 import { Preloader } from '@/components/site/preloader'
 
-const prata = Prata({ subsets: ['latin'], weight: '400', variable: '--font-prata' })
-const montserrat = Montserrat({ subsets: ['latin'], variable: '--font-montserrat' })
+const sora = Sora({ subsets: ['latin'], weight: ['600', '700', '800'], variable: '--font-sora' })
+const manrope = Manrope({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-manrope' })
 
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.SITE_URL || 'http://127.0.0.1:3000'),
@@ -16,13 +16,6 @@ export const metadata: Metadata = {
   },
   description:
     'FoundaScrow holds the buyer’s money in a secure vault and releases it to the seller only when delivery is confirmed. Payment links for WhatsApp, Instagram and everywhere Nigerians trade.',
-  keywords: [
-    'escrow Nigeria',
-    'secure payment link',
-    'buy and sell safely Nigeria',
-    'WhatsApp escrow',
-    'FoundaScrow',
-  ],
   openGraph: {
     type: 'website',
     siteName: 'FoundaScrow',
@@ -41,7 +34,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className="dark">
-      <body className={`${prata.variable} ${montserrat.variable} font-sans antialiased`}>
+      <body className={`${sora.variable} ${manrope.variable} font-sans antialiased`}>
         <Preloader />
         <Navbar />
         <div className="pt-16">{children}</div>

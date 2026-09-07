@@ -1,27 +1,24 @@
 import { NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
 
-const FOUNDA_API_URL = process.env.FOUNDA_API_URL!
-const FOUNDA_API_KEY = process.env.FOUNDA_API_KEY!
+export const dynamic = 'force-dynamic'
 
-export async function GET(
-  request: Request,
-  { params }: { params: Promise<{ reference: string }> }
-) {
+export async function GET(_req: Request, { params }: { params: Promise<{ reference: string }> }) {
   try {
     const { reference } = await params
-    
-    const res = await fetch(`${FOUNDA_API_URL}/escrows/${reference}`, {
-      headers: {
-        'Authorization': `Bearer ${FOUNDA_API_KEY}`,
-      },
+    const escrow = await prisma.escrow.findFirst({ where: { reference } })
+    if (!escrow) return NextResponse.json({ error: 'Escrow not found' }, { status: 404 })
+
+    return NextResponse.json({
+      reference: escrow.reference,
+      title: escrow.title,
+      amount: String(escrow.amount),
+      fee: String(escrow.fee),
+      status: escrow.status,
+      createdAt: String(escrow.createdAt),
+      metadata: escrow.metadata ?? null,
     })
-    
-    if (!res.ok) {
-      return NextResponse.json({ error: 'Escrow not found' }, { status: 404 })
-    }
-    
-    return NextResponse.json(await res.json())
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 })
+  } catch (e: any) {
+    return NextResponse.json({ error: e.message || 'Lookup failed' }, { status: 500 })
   }
 }
