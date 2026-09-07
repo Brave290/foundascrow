@@ -3,11 +3,11 @@ import { ShieldCheck, PackageCheck, Undo2 } from 'lucide-react'
 
 export default function Home() {
   return (
-    <main className="flex min-h-screen flex-col items-center justify-center px-4 py-16">
+    <main className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-16">
       <div className="flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.svg" alt="FoundaScrow" className="size-12" />
-        <p className="font-display text-xl text-foreground">FoundaScrow</p>
+        <img src="/logo.png" alt="FoundaScrow" className="size-14 rounded-full" />
+        <p className="font-display text-2xl text-foreground">FoundaScrow</p>
       </div>
 
       <h1 className="mt-10 max-w-2xl text-center font-display text-4xl leading-tight text-foreground sm:text-5xl">
