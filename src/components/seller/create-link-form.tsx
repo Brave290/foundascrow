@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -9,6 +9,7 @@ import { BrandSpinner } from '@/components/site/brand-spinner'
 import {
   MessageCircle, Send, AtSign, Gamepad2, FileDown, Package,
   ArrowLeft, ArrowRight, Lock, Paperclip, FileText, X,
+  ChevronDown, Check, Search,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -28,6 +29,7 @@ const kb = (n: number) => `${(n / 1024).toFixed(0)} KB`
 export function CreateLinkForm() {
   const router = useRouter()
   const fileRef = useRef<HTMLInputElement>(null)
+  const bankBoxRef = useRef<HTMLDivElement>(null)
   const [step, setStep] = useState(0)
   const [itemType, setItemType] = useState('')
   const [title, setTitle] = useState('')
@@ -39,7 +41,10 @@ export function CreateLinkForm() {
   const [loadingMsg, setLoadingMsg] = useState('')
   const [error, setError] = useState('')
   const [banks, setBanks] = useState<{ code: string; name: string }[]>([])
+  const [bankOpen, setBankOpen] = useState(false)
+  const [bankQuery, setBankQuery] = useState('')
   const [bankCode, setBankCode] = useState('')
+  const [bankName, setBankName] = useState('')
   const [accountNumber, setAccountNumber] = useState('')
   const [accountName, setAccountName] = useState('')
   const [resolving, setResolving] = useState(false)
@@ -48,6 +53,15 @@ export function CreateLinkForm() {
   const isDigital = selected?.digital ?? false
   const price = Number(amount) || 0
   const fee = Math.round(price * 0.02)
+  const filteredBanks = banks.filter((b) => b.name.toLowerCase().includes(bankQuery.toLowerCase()))
+
+  useEffect(() => {
+    function onDown(e: MouseEvent) {
+      if (bankBoxRef.current && !bankBoxRef.current.contains(e.target as Node)) setBankOpen(false)
+    }
+    document.addEventListener('mousedown', onDown)
+    return () => document.removeEventListener('mousedown', onDown)
+  }, [])
 
   function pickFiles(e: React.ChangeEvent<HTMLInputElement>) {
     const picked = Array.from(e.target.files || [])
@@ -108,7 +122,6 @@ export function CreateLinkForm() {
       const d = await res.json().catch(() => null)
       if (!res.ok) throw new Error(d?.error || 'Could not create link')
 
-      // Auto-upload queued files now that we have a reference
       for (let i = 0; i < queuedFiles.length; i++) {
         setLoadingMsg(`Uploading file ${i + 1} of ${queuedFiles.length}...`)
         const form = new FormData()
@@ -182,8 +195,6 @@ export function CreateLinkForm() {
                       className="resize-none flex w-full rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground shadow-sm transition-all placeholder:text-muted-foreground/60 focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
                     />
                   </div>
-
-                  {/* FILE UPLOAD UNDER DIGITAL ITEM */}
                   <div className="space-y-2">
                     <Label>Attach files (optional)</Label>
                     <input ref={fileRef} type="file" multiple className="hidden" onChange={pickFiles} />
@@ -242,20 +253,55 @@ export function CreateLinkForm() {
 
           {step === 3 && (
             <div className="space-y-4 rounded-xl border border-border bg-card p-5">
+              {/* CUSTOM BANK COMBOBOX */}
               <div className="space-y-2">
                 <Label>Payout bank</Label>
-                <select
-                  value={bankCode}
-                  onFocus={loadBanks}
-                  onChange={(e) => { setBankCode(e.target.value); setAccountName('') }}
-                  className="flex h-11 w-full rounded-xl border border-input bg-card px-4 text-sm text-foreground focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
-                >
-                  <option value="">Select bank</option>
-                  {banks.map((b) => (
-                    <option key={b.code} value={b.code}>{b.name}</option>
-                  ))}
-                </select>
+                <div className="relative" ref={bankBoxRef}>
+                  <button
+                    type="button"
+                    onClick={() => { setBankOpen((v) => !v); loadBanks() }}
+                    className="flex h-11 w-full items-center justify-between rounded-xl border border-input bg-card px-4 text-sm text-foreground transition-all focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+                  >
+                    <span className={bankName ? '' : 'text-muted-foreground/60'}>{bankName || 'Select bank'}</span>
+                    <ChevronDown className={`size-4 text-muted-foreground transition-transform ${bankOpen ? 'rotate-180' : ''}`} />
+                  </button>
+                  {bankOpen && (
+                    <div className="absolute z-50 mt-2 w-full overflow-hidden rounded-xl border border-border bg-card shadow-2xl">
+                      <div className="border-b border-border p-2">
+                        <div className="relative">
+                          <Search className="absolute left-3 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+                          <input
+                            autoFocus
+                            value={bankQuery}
+                            onChange={(e) => setBankQuery(e.target.value)}
+                            onKeyDown={(e) => e.key === 'Escape' && setBankOpen(false)}
+                            placeholder="Search bank..."
+                            className="h-9 w-full rounded-lg bg-background pl-9 pr-3 text-sm text-foreground placeholder:text-muted-foreground/60 focus:outline-none"
+                          />
+                        </div>
+                      </div>
+                      <ul className="max-h-56 overflow-y-auto">
+                        {filteredBanks.map((b) => (
+                          <li key={b.code}>
+                            <button
+                              type="button"
+                              onClick={() => { setBankCode(b.code); setBankName(b.name); setBankOpen(false); setAccountName('') }}
+                              className="flex w-full items-center justify-between px-4 py-2.5 text-left text-sm text-foreground transition-colors hover:bg-accent"
+                            >
+                              {b.name}
+                              {bankCode === b.code && <Check className="size-4 text-primary" />}
+                            </button>
+                          </li>
+                        ))}
+                        {filteredBanks.length === 0 && (
+                          <li className="px-4 py-3 text-xs text-muted-foreground">No bank matches "{bankQuery}"</li>
+                        )}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </div>
+
               <div className="space-y-2">
                 <Label>Account number</Label>
                 <div className="flex gap-2">
