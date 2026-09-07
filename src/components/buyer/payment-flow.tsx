@@ -77,7 +77,7 @@ export function PaymentFlow({ reference }: { reference: string }) {
   if (!escrow) return null
 
   const price = Number(escrow.amount)
-  const fee = Number(escrow.fee)
+  const fee = Number(escrow.fee) > 0 ? Number(escrow.fee) : Math.round(price * 0.02)
   const total = price + fee
   const alreadyPaid = escrow.status !== 'pending'
 
@@ -112,7 +112,7 @@ export function PaymentFlow({ reference }: { reference: string }) {
               {error && <p className="rounded-xl border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">{error}</p>}
               <Button className="w-full" size="lg" onClick={handlePayment} disabled={paying}>
                 {paying ? <BrandSpinner className="size-4" /> : <Lock className="size-4" />}
-                {paying ? 'Opening Paystack...' : `Pay ₦{ngn(total)} securely`}
+                {paying ? 'Opening Paystack...' : `Pay ₦${ngn(total)} securely`}
               </Button>
               <p className="flex items-center justify-center gap-1.5 text-[10px] text-muted-foreground">
                 <ExternalLink className="size-3" /> You will finish on Paystack's secure page, then return here automatically.

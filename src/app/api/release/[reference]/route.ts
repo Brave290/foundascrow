@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
+import { emails } from '@/lib/email'
 
 const PS_KEY = process.env.PAYSTACK_SECRET_KEY || ''
 
@@ -38,6 +39,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ refere
       where: { id: escrow.id },
       data: { status: 'released', releasedAt: new Date(), metadata: { ...meta, payout: { ...payout, transferRef: trData.data.transfer_code || trData.data.id, paidAt: new Date().toISOString() } } },
     })
+    emails.payout(meta.sellerEmail, escrow.title, reference, Number(escrow.amount).toLocaleString('en-NG'), trData.data.transfer_code || trData.data.id).catch(() => {})
     return NextResponse.json({ success: true, transfer: trData.data.transfer_code || trData.data.id })
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Release failed' }, { status: 500 })

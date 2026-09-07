@@ -14,7 +14,12 @@ export async function POST(request: Request) {
     if (!escrow) return NextResponse.json({ error: 'Escrow not found' }, { status: 404 })
     if (escrow.status !== 'pending') return NextResponse.json({ error: `This escrow is already ${escrow.status}.`, already: true }, { status: 409 })
 
-    const kobo = Math.round((Number(escrow.amount) + Number(escrow.fee)) * 100)
+    const price = Number(escrow.amount)
+    const fee = Number(escrow.fee) > 0 ? Number(escrow.fee) : Math.round(price * 0.02)
+    const kobo = Math.round((price + fee) * 100)
+    // Unique per attempt → abandoned/failed attempts NEVER burn the link
+    const psRef = `${escrow.reference}-${Date.now().toString(36).toUpperCase()}`
+
     const ps = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
       headers: { Authorization: `Bearer ${PS_KEY}`, 'Content-Type': 'application/json' },
@@ -22,8 +27,8 @@ export async function POST(request: Request) {
         email: buyerEmail,
         amount: kobo,
         currency: 'NGN',
-        reference: escrow.reference,
-        callback_url: `${SITE}/pay/callback`,
+        reference: psRef,
+        callback_url: `${SITE}/pay/callback?ref=${escrow.reference}`,
         metadata: { escrowReference: escrow.reference, escrowId: escrow.id, buyerEmail, source: 'foundascrow' },
       }),
     })
