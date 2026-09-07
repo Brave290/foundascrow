@@ -1,7 +1,9 @@
 import { ImageResponse } from 'next/og'
+import { readFileSync } from 'node:fs'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
+const logo = `data:image/png;base64,${readFileSync('public/logo-brand.png').toString('base64')}`
 
 export async function GET() {
   const img = new ImageResponse(
@@ -18,9 +20,7 @@ export async function GET() {
           border: '6px solid #f59e0b',
         }}
       >
-        <span style={{ display: 'flex', color: '#f59e0b', fontSize: 68, fontWeight: 800, fontFamily: 'sans-serif' }}>
-          S
-        </span>
+        <img src={logo} width="104" height="104" />
       </div>
     ),
     { width: 128, height: 128 }

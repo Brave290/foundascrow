@@ -1,9 +1,11 @@
 import { ImageResponse } from 'next/og'
+import { readFileSync } from 'node:fs'
 
 export const runtime = 'nodejs'
 export const alt = 'FoundaScrow — Buy and sell without fear'
 export const size = { width: 1200, height: 630 }
 export const contentType = 'image/png'
+const logo = `data:image/png;base64,${readFileSync('public/logo-brand.png').toString('base64')}`
 
 export default function Image() {
   return new ImageResponse(
@@ -20,22 +22,7 @@ export default function Image() {
         }}
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 24 }}>
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              width: 84,
-              height: 84,
-              borderRadius: '50%',
-              border: '3px solid #f59e0b',
-              color: '#f59e0b',
-              fontSize: 44,
-              fontWeight: 800,
-            }}
-          >
-            S
-          </div>
+          <img src={logo} width="84" height="84" />
           <div style={{ display: 'flex', color: '#f8fafc', fontSize: 44, fontWeight: 700 }}>
             FoundaScrow
           </div>
