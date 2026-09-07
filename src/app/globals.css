@@ -97,3 +97,19 @@ h1, h2, h3 {
   border-color: rgba(245, 158, 11, 0.3);
   box-shadow: 0 8px 24px rgba(245, 158, 11, 0.08);
 }
+
+@keyframes shimmer {
+  0% { background-position: -200px 0; }
+  100% { background-position: 200px 0; }
+}
+.animate-shimmer {
+  background: linear-gradient(90deg, rgba(245,158,11,0.15) 25%, rgba(245,158,11,0.45) 50%, rgba(245,158,11,0.15) 75%);
+  background-size: 200px 100%;
+  animation: shimmer 1.2s linear infinite;
+}
+
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgba(245,158,11,0.35); }
+  100% { box-shadow: 0 0 0 12px rgba(245,158,11,0); }
+}
+.animate-pulse-ring { animation: pulse-ring 1.6s cubic-bezier(0, 0, 0.2, 1) infinite; }
