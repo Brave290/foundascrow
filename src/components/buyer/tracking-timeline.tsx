@@ -275,7 +275,7 @@ export function TrackingTimeline({ reference }: { reference: string }) {
                 )}
                 {files.length > 0 && (
                   <div className="mt-3 space-y-2">
-                    {files.map((f) => (
+                    {files.map((f: VaultFile) => (
                       <button
                         key={f.path}
                         type="button"
