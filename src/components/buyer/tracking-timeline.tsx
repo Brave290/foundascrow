@@ -92,11 +92,20 @@ export function TrackingTimeline({ reference }: { reference: string }) {
 
   async function confirmReceipt() {
     setBusy(true)
-    const res = await fetch(`/api/release/${reference}`, { method: 'POST' })
-    const d = await res.json().catch(() => null)
-    if (!res.ok) setError(d?.error || 'Release failed')
-    await load().catch(() => {})
-    setBusy(false)
+    setError('')
+    try {
+      const res = await fetch(`/api/release/${reference}`, { method: 'POST' })
+      const d = await res.json().catch(() => null)
+      if (!res.ok) {
+        setError(d?.error || 'Release failed. Money remains safely in the vault — you can retry.')
+      } else {
+        await load().catch(() => {})
+      }
+    } catch {
+      setError('Network error while releasing. Money remains safely in the vault — retry in a moment.')
+    } finally {
+      setBusy(false)
+    }
   }
 
   async function copyDetails() {
@@ -298,6 +307,19 @@ export function TrackingTimeline({ reference }: { reference: string }) {
           </CardContent>
         </Card>
       )}
+
+      <AnimatePresence>
+        {error && escrow && (
+          <motion.p
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0 }}
+            className="rounded-xl border border-destructive/50 bg-destructive/10 p-3 text-xs text-destructive"
+          >
+            {error}
+          </motion.p>
+        )}
+      </AnimatePresence>
 
       {/* Confirm receipt */}
       <AnimatePresence>

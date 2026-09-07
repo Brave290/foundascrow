@@ -25,7 +25,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ refere
       body: JSON.stringify({ type: 'nuban', name: payout.accountName, account_number: payout.accountNumber, bank_code: payout.bankCode, currency: 'NGN' }),
     })
     const recData = await rec.json().catch(() => null)
-    if (!rec.ok || !recData?.data?.recipient_code) return NextResponse.json({ error: 'Payout setup failed: ' + (recData?.message || 'unknown') }, { status: 502 })
+    if (!rec.ok || !recData?.data?.recipient_code) {
+      console.error('RECIPIENT FAIL:', JSON.stringify(recData))
+      return NextResponse.json({ error: 'Payout setup failed: ' + (recData?.message || 'unknown') }, { status: 502 })
+    }
 
     const tr = await fetch('https://api.paystack.co/transfer', {
       method: 'POST',
@@ -33,7 +36,10 @@ export async function POST(_req: Request, { params }: { params: Promise<{ refere
       body: JSON.stringify({ recipient: recData.data.recipient_code, amount: priceKobo, reason: `FoundaScrow ${reference}` }),
     })
     const trData = await tr.json().catch(() => null)
-    if (!tr.ok || !trData?.data) return NextResponse.json({ error: 'Payout failed: ' + (trData?.message || 'unknown') + '. Money remains in vault.' }, { status: 502 })
+    if (!tr.ok || !trData?.data) {
+      console.error('TRANSFER FAIL:', JSON.stringify(trData))
+      return NextResponse.json({ error: 'Payout failed: ' + (trData?.message || 'unknown') + '. Money remains in vault.' }, { status: 502 })
+    }
 
     await prisma.escrow.update({
       where: { id: escrow.id },
@@ -42,6 +48,7 @@ export async function POST(_req: Request, { params }: { params: Promise<{ refere
     emails.payout(meta.sellerEmail, escrow.title, reference, Number(escrow.amount).toLocaleString('en-NG'), trData.data.transfer_code || trData.data.id).catch(() => {})
     return NextResponse.json({ success: true, transfer: trData.data.transfer_code || trData.data.id })
   } catch (e: any) {
+    console.error('RELEASE ERROR:', e)
     return NextResponse.json({ error: e.message || 'Release failed' }, { status: 500 })
   }
 }
