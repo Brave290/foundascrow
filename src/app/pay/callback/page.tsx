@@ -4,53 +4,53 @@ import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 import { BrandSpinner } from '@/components/site/brand-spinner'
-import { Copy, Check, XCircle, Clock } from 'lucide-react'
+import { Copy, Check, XCircle, Clock, RefreshCw } from 'lucide-react'
 
 function Inner() {
   const router = useRouter()
   const params = useSearchParams()
   const [state, setState] = useState<'verifying' | 'failed' | 'abandoned' | 'unknown'>('verifying')
+  const [manualChecking, setManualChecking] = useState(false)
   const [copied, setCopied] = useState(false)
   const escrowRef = params.get('ref') || ''
   const psRef = params.get('reference') || params.get('trxref') || ''
 
   useEffect(() => {
     if (!psRef) {
-      router.replace(escrowRef ? `/track/${escrowRef}` : '/track')
+      setState('unknown')
       return
     }
+    verify()
+  }, [psRef])
+
+  async function verify() {
+    setState('verifying')
     let alive = true
-    async function run() {
-      for (let i = 0; i < 3; i++) {
-        const res = await fetch('/api/pay/verify', {
+    for (let i = 0; i < 3; i++) {
+      const res = await fetch('/api/pay/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference: psRef, escrowRef, buyerEmail: sessionStorage.getItem('fsc_buyer_email') || '' }),
+      })
+      const d = await res.json().catch(() => null)
+      if (!alive) return
+      if (d?.success) {
+        router.replace(`/track/${escrowRef || d.escrowReference}`)
+        return
+      }
+      if (['failed', 'abandoned', 'cancelled'].includes(d?.status)) {
+        setState(d.status === 'failed' ? 'failed' : 'abandoned')
+        fetch('/api/notify/abandoned', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ reference: psRef, escrowRef, buyerEmail: sessionStorage.getItem('fsc_buyer_email') || '' }),
-        })
-        const d = await res.json().catch(() => null)
-        if (!alive) return
-        if (d?.success) {
-          router.replace(`/track/${escrowRef || d.escrowReference}`)
-          return
-        }
-        if (['failed', 'abandoned', 'cancelled'].includes(d?.status)) {
-          setState(d.status === 'failed' ? 'failed' : 'abandoned')
-          fetch('/api/notify/abandoned', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ reference: escrowRef, buyerEmail: sessionStorage.getItem('fsc_buyer_email') || '' }),
-          }).catch(() => {})
-          return
-        }
-        await new Promise((r) => setTimeout(r, 2500))
+          body: JSON.stringify({ reference: escrowRef, buyerEmail: sessionStorage.getItem('fsc_buyer_email') || '' }),
+        }).catch(() => {})
+        return
       }
-      setState('unknown')
+      await new Promise((r) => setTimeout(r, 2500))
     }
-    run()
-    return () => {
-      alive = false
-    }
-  }, [params, router, escrowRef, psRef])
+    setState('unknown')
+  }
 
   async function copy() {
     await navigator.clipboard.writeText(`Escrow: ${escrowRef} · Paystack: ${psRef}`)
@@ -79,11 +79,22 @@ function Inner() {
         {failed
           ? 'Paystack reported this attempt as failed. No money left your account, and your order link is still active.'
           : state === 'unknown'
-            ? 'We are still confirming this transaction with Paystack. If you completed payment, your order page will update shortly.'
+            ? 'We are still confirming this transaction with Paystack. If you completed payment, check again below or view your order page.'
             : 'You aborted this transaction by closing the checkout before completing payment. No money left your account — your order link is still active.'}
       </p>
       <p className="mt-4 font-mono text-xs text-muted-foreground">{escrowRef}</p>
       <div className="mt-8 flex flex-wrap justify-center gap-3">
+        {state === 'unknown' && (
+          <button
+            type="button"
+            onClick={() => { setManualChecking(true); verify().finally(() => setManualChecking(false)) }}
+            className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
+            disabled={manualChecking}
+          >
+            {manualChecking ? <BrandSpinner className="mr-1 inline size-4" /> : <RefreshCw className="mr-1 inline size-4" />}
+            Check my payment
+          </button>
+        )}
         {escrowRef && (
           <Link href={`/pay/${escrowRef}`} className="rounded-xl bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground">
             Try again

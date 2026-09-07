@@ -38,6 +38,7 @@ export function TrackingTimeline({ reference }: { reference: string }) {
   const [refreshing, setRefreshing] = useState(false)
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null)
   const [downloading, setDownloading] = useState('')
+  const [checking, setChecking] = useState(false)
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/escrows/${reference}`)
@@ -52,6 +53,24 @@ export function TrackingTimeline({ reference }: { reference: string }) {
     const t = setInterval(() => load().catch(() => {}), 15000)
     return () => clearInterval(t)
   }, [load])
+
+
+  async function checkPayment() {
+    if (!escrow || escrow.status !== 'pending') return
+    setChecking(true)
+    const meta: any = escrow.metadata ?? {}
+    const attempts = (meta.paymentAttempts as any[]) ?? []
+    const lastAttempt = attempts[attempts.length - 1]
+    if (lastAttempt?.psRef) {
+      await fetch('/api/pay/verify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ reference: lastAttempt.psRef, escrowRef: escrow.reference, buyerEmail: meta.buyerEmail }),
+      }).catch(() => {})
+      await load().catch(() => {})
+    }
+    setChecking(false)
+  }
 
   async function refresh() {
     setRefreshing(true)
@@ -158,6 +177,17 @@ export function TrackingTimeline({ reference }: { reference: string }) {
           >
             <CreditCard className="size-4" /> Pay ₦{ngn(total)} now — held in vault till delivery
           </Link>
+          {escrow.metadata?.lastAttempt && (
+            <button
+              type="button"
+              onClick={checkPayment}
+              disabled={checking}
+              className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-border bg-card text-sm font-semibold text-foreground transition-all hover:border-primary/40"
+            >
+              {checking ? <BrandSpinner className="size-4" /> : <RefreshCw className="size-4" />}
+              Check if I already paid
+            </button>
+          )}
           <p className="text-center text-[10px] text-muted-foreground">Card, bank transfer & USSD via Paystack</p>
         </motion.div>
       )}
