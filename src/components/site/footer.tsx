@@ -25,7 +25,7 @@ export function Footer() {
           <div className="sm:col-span-2 lg:col-span-1">
             <Link href="/" className="flex items-center gap-2.5">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="" className="size-9 rounded-full" />
+              <img src="/logo.webp" alt="" className="size-9 rounded-full object-contain" />
               <span className="font-display text-lg text-foreground">FoundaScrow</span>
             </Link>
             <p className="mt-3 max-w-xs text-sm leading-relaxed text-muted-foreground">

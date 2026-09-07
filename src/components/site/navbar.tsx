@@ -40,10 +40,10 @@ export function Navbar() {
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-2.5" aria-label="FoundaScrow home">
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logo.png" alt="" className="size-9 rounded-full" />
+              <img src="/logo.webp" alt="" className="size-9 rounded-full object-contain" />
               <span className="font-display text-lg text-foreground">FoundaScrow</span>
             </Link>
-            
+
             {/* Founda Technologies badge - slides in */}
             <div
               className={`hidden items-center rounded-full border border-border bg-card px-3 py-1 sm:flex ${

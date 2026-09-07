@@ -6,7 +6,7 @@ export default function Home() {
     <main className="flex min-h-[calc(100vh-4rem)] flex-col items-center justify-center px-4 py-16">
       <div className="flex items-center gap-3">
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo.png" alt="FoundaScrow" className="size-14 rounded-full" />
+        <img src="/logo.webp" alt="FoundaScrow" className="size-14 rounded-full object-contain" />
         <p className="font-display text-2xl text-foreground">FoundaScrow</p>
       </div>
 
