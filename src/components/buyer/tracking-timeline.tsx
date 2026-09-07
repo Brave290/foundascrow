@@ -40,6 +40,7 @@ export function TrackingTimeline({ reference }: { reference: string }) {
   const [updatedAt, setUpdatedAt] = useState<Date | null>(null)
   const [downloading, setDownloading] = useState('')
   const [checking, setChecking] = useState(false)
+  const [showPayout, setShowPayout] = useState(false)
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/escrows/${reference}`)
@@ -318,6 +319,40 @@ export function TrackingTimeline({ reference }: { reference: string }) {
           >
             {error}
           </motion.p>
+        )}
+      </AnimatePresence>
+
+      {/* Payout details banner */}
+      <AnimatePresence>
+        {funded && !delivered && metadata.payout && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.95 }}
+            className="rounded-xl border border-border bg-card p-4 text-xs"
+          >
+            <div className="flex items-center justify-between">
+              <p className="font-semibold text-foreground">Seller payout details</p>
+              <button
+                type="button"
+                onClick={() => setShowPayout((v) => !v)}
+                className="text-primary hover:underline"
+              >
+                {showPayout ? 'Hide' : 'Show'}
+              </button>
+            </div>
+            {showPayout && (
+              <motion.div
+                initial={{ height: 0 }}
+                animate={{ height: 'auto' }}
+                className="mt-2 space-y-1 text-muted-foreground"
+              >
+                <p><strong>Bank:</strong> {metadata.payout.bankName || metadata.payout.bankCode}</p>
+                <p><strong>Account:</strong> {metadata.payout.accountNumber}</p>
+                <p><strong>Name:</strong> {metadata.payout.accountName}</p>
+              </motion.div>
+            )}
+          </motion.div>
         )}
       </AnimatePresence>
 
