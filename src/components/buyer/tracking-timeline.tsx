@@ -41,6 +41,7 @@ export function TrackingTimeline({ reference }: { reference: string }) {
   const [downloading, setDownloading] = useState('')
   const [checking, setChecking] = useState(false)
   const [showPayout, setShowPayout] = useState(false)
+  const [reenterPayout, setReenterPayout] = useState(false)
 
   const load = useCallback(async () => {
     const res = await fetch(`/api/escrows/${reference}`)

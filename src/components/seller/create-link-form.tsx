@@ -116,7 +116,7 @@ export function CreateLinkForm() {
           itemType: isDigital ? 'digital' : 'physical',
           itemKind: itemType,
           deliveryDetails: isDigital ? deliveryDetails : '',
-          payout: { bankCode, accountNumber, accountName },
+          payout: { bankCode, accountNumber, accountName: accountName.replace(/[^A-Za-z\s.-]/g, '').trim().toUpperCase() },
         }),
       })
       const d = await res.json().catch(() => null)
