@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -8,7 +8,7 @@ import { Label } from '@/components/ui/label'
 import { BrandSpinner } from '@/components/site/brand-spinner'
 import {
   MessageCircle, Send, AtSign, Gamepad2, FileDown, Package,
-  ArrowLeft, ArrowRight, Lock,
+  ArrowLeft, ArrowRight, Lock, Paperclip, FileText, X,
 } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -23,16 +23,20 @@ const ITEM_TYPES = [
 
 const STEPS = ['Item', 'Details', 'Price', 'Review']
 const ngn = (n: number) => n.toLocaleString('en-NG')
+const kb = (n: number) => `${(n / 1024).toFixed(0)} KB`
 
 export function CreateLinkForm() {
   const router = useRouter()
+  const fileRef = useRef<HTMLInputElement>(null)
   const [step, setStep] = useState(0)
   const [itemType, setItemType] = useState('')
   const [title, setTitle] = useState('')
   const [deliveryDetails, setDeliveryDetails] = useState('')
+  const [queuedFiles, setQueuedFiles] = useState<File[]>([])
   const [amount, setAmount] = useState('')
   const [sellerEmail, setSellerEmail] = useState('')
   const [loading, setLoading] = useState(false)
+  const [loadingMsg, setLoadingMsg] = useState('')
   const [error, setError] = useState('')
   const [banks, setBanks] = useState<{ code: string; name: string }[]>([])
   const [bankCode, setBankCode] = useState('')
@@ -44,6 +48,13 @@ export function CreateLinkForm() {
   const isDigital = selected?.digital ?? false
   const price = Number(amount) || 0
   const fee = Math.round(price * 0.02)
+
+  function pickFiles(e: React.ChangeEvent<HTMLInputElement>) {
+    const picked = Array.from(e.target.files || [])
+    const valid = picked.filter((f) => f.size <= 10 * 1024 * 1024)
+    setQueuedFiles((q) => [...q, ...valid].slice(0, 5))
+    if (fileRef.current) fileRef.current.value = ''
+  }
 
   async function loadBanks() {
     if (banks.length) return
@@ -79,6 +90,7 @@ export function CreateLinkForm() {
     setLoading(true)
     setError('')
     try {
+      setLoadingMsg('Creating your secure link...')
       const res = await fetch('/api/links', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -95,6 +107,16 @@ export function CreateLinkForm() {
       })
       const d = await res.json().catch(() => null)
       if (!res.ok) throw new Error(d?.error || 'Could not create link')
+
+      // Auto-upload queued files now that we have a reference
+      for (let i = 0; i < queuedFiles.length; i++) {
+        setLoadingMsg(`Uploading file ${i + 1} of ${queuedFiles.length}...`)
+        const form = new FormData()
+        form.append('file', queuedFiles[i])
+        form.append('reference', d.reference)
+        await fetch('/api/uploads', { method: 'POST', body: form })
+      }
+
       router.push(`/links/${d.reference}`)
     } catch (e: any) {
       setError(e.message)
@@ -149,19 +171,51 @@ export function CreateLinkForm() {
                 <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Aged WhatsApp number with 50k contacts" />
               </div>
               {isDigital && (
-                <div className="space-y-2">
-                  <Label>Delivery details (what the buyer receives)</Label>
-                  <textarea
-                    rows={3}
-                    value={deliveryDetails}
-                    onChange={(e) => setDeliveryDetails(e.target.value)}
-                    placeholder={'Number: +234...\nLogin: ...\nPassword: ...'}
-                    className="resize-none flex w-full rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground shadow-sm transition-all placeholder:text-muted-foreground/60 focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
-                  />
-                  <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                    <Lock className="size-3 text-primary" /> Sealed in the vault until the buyer pays. You can also attach files on the next page.
-                  </p>
-                </div>
+                <>
+                  <div className="space-y-2">
+                    <Label>Delivery details (what the buyer receives)</Label>
+                    <textarea
+                      rows={3}
+                      value={deliveryDetails}
+                      onChange={(e) => setDeliveryDetails(e.target.value)}
+                      placeholder={'Number: +234...\nLogin: ...\nPassword: ...'}
+                      className="resize-none flex w-full rounded-xl border border-input bg-background px-4 py-3 text-sm text-foreground shadow-sm transition-all placeholder:text-muted-foreground/60 focus-visible:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/30"
+                    />
+                  </div>
+
+                  {/* FILE UPLOAD UNDER DIGITAL ITEM */}
+                  <div className="space-y-2">
+                    <Label>Attach files (optional)</Label>
+                    <input ref={fileRef} type="file" multiple className="hidden" onChange={pickFiles} />
+                    <button
+                      type="button"
+                      onClick={() => fileRef.current?.click()}
+                      className="flex w-full items-center justify-center gap-2 rounded-xl border border-dashed border-border bg-background px-4 py-4 text-sm text-muted-foreground transition-all hover:border-primary/40 hover:text-foreground"
+                    >
+                      <Paperclip className="size-4" /> Add images, docs, ZIPs (max 10MB each)
+                    </button>
+                    {queuedFiles.length > 0 && (
+                      <div className="space-y-2">
+                        {queuedFiles.map((f, i) => (
+                          <div key={i} className="flex items-center justify-between rounded-lg border border-border bg-background px-3 py-2 text-xs">
+                            <span className="flex items-center gap-2 truncate text-foreground">
+                              <FileText className="size-3.5 shrink-0 text-primary" /> {f.name}
+                            </span>
+                            <span className="ml-2 flex shrink-0 items-center gap-2">
+                              <span className="font-mono text-muted-foreground">{kb(f.size)}</span>
+                              <button type="button" onClick={() => setQueuedFiles((q) => q.filter((_, j) => j !== i))} aria-label="Remove file">
+                                <X className="size-3.5 text-muted-foreground hover:text-destructive" />
+                              </button>
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                      <Lock className="size-3 text-primary" /> Sealed in the vault until the buyer pays.
+                    </p>
+                  </div>
+                </>
               )}
             </div>
           )}
@@ -227,6 +281,9 @@ export function CreateLinkForm() {
                 <div className="flex justify-between"><span className="text-muted-foreground">Item</span><span className="text-foreground">{selected?.label}</span></div>
                 <div className="flex justify-between gap-4"><span className="text-muted-foreground">Title</span><span className="text-right text-foreground">{title}</span></div>
                 <div className="flex justify-between"><span className="text-muted-foreground">Delivery</span><span className="text-foreground">{isDigital ? 'Sealed in vault' : 'Physical shipping'}</span></div>
+                {queuedFiles.length > 0 && (
+                  <div className="flex justify-between"><span className="text-muted-foreground">Files</span><span className="text-foreground">{queuedFiles.length} attached</span></div>
+                )}
                 <div className="flex justify-between"><span className="text-muted-foreground">Payout to</span><span className="text-right text-foreground">{accountName || '—'} · {accountNumber}</span></div>
                 <div className="flex justify-between border-t border-border pt-2"><span className="text-muted-foreground">Buyer pays</span><span className="font-mono text-primary">₦{ngn(price + fee)}</span></div>
               </div>
@@ -246,13 +303,13 @@ export function CreateLinkForm() {
           </Button>
         )}
         {step < STEPS.length - 1 ? (
-          <Button className="flex-1" onClick={() => setStep(step + 1)} disabled={!canNext()}>
+          <Button className="flex-1" onClick={() => setStep(step + 1)} disabled={!canNext() || loading}>
             Continue <ArrowRight />
           </Button>
         ) : (
           <Button className="flex-1" size="lg" onClick={submit} disabled={loading || !canNext()}>
             {loading ? <BrandSpinner className="size-4" /> : <Lock className="size-4" />}
-            {loading ? 'Securing your link...' : 'Create secure link'}
+            {loading ? loadingMsg : 'Create secure link'}
           </Button>
         )}
       </div>
