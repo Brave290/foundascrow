@@ -4,6 +4,7 @@ import './globals.css'
 import { Navbar } from '@/components/site/navbar'
 import { Footer } from '@/components/site/footer'
 import { Preloader } from '@/components/site/preloader'
+import { BackButton } from '@/components/site/back-button'
 
 const sora = Sora({ subsets: ['latin'], weight: ['600', '700', '800'], variable: '--font-sora' })
 const manrope = Manrope({ subsets: ['latin'], weight: ['400', '500', '600', '700'], variable: '--font-manrope' })
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className={`${sora.variable} ${manrope.variable} font-sans antialiased`}>
         <Preloader />
         <Navbar />
+        <BackButton />
         <div className="pt-16">{children}</div>
         <Footer />
       </body>

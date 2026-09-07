@@ -1,23 +1,44 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 
-const API_URL = process.env.FOUNDA_API_URL!
-const API_KEY = process.env.FOUNDA_PLATFORM_KEY || process.env.FOUNDA_API_KEY || ''
+const PS_KEY = process.env.PAYSTACK_SECRET_KEY || ''
 
 export async function POST(_req: Request, { params }: { params: Promise<{ reference: string }> }) {
-  if (!API_KEY) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
+  if (!PS_KEY) return NextResponse.json({ error: 'Server misconfigured' }, { status: 500 })
   try {
     const { reference } = await params
     const escrow = await prisma.escrow.findFirst({ where: { reference } })
     if (!escrow) return NextResponse.json({ error: 'Escrow not found' }, { status: 404 })
+    if (escrow.status === 'released') return NextResponse.json({ success: true, already: true })
+    if (escrow.status !== 'held') return NextResponse.json({ error: 'Escrow is not funded yet.' }, { status: 409 })
 
-    const res = await fetch(`${API_URL}/escrows/${escrow.id}/release`, {
+    const meta: any = escrow.metadata ?? {}
+    const payout = meta.payout
+    if (!payout?.bankCode || !payout?.accountNumber) return NextResponse.json({ error: 'Seller payout details missing.' }, { status: 422 })
+
+    const priceKobo = Math.round(Number(escrow.amount) * 100)
+
+    const rec = await fetch('https://api.paystack.co/transfer/recipient', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${API_KEY}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${PS_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ type: 'nuban', name: payout.accountName, account_number: payout.accountNumber, bank_code: payout.bankCode, currency: 'NGN' }),
     })
-    const data = await res.json().catch(() => null)
-    if (!res.ok) return NextResponse.json({ error: data?.error || 'Release failed' }, { status: res.status })
-    return NextResponse.json({ success: true })
+    const recData = await rec.json().catch(() => null)
+    if (!rec.ok || !recData?.data?.recipient_code) return NextResponse.json({ error: 'Payout setup failed: ' + (recData?.message || 'unknown') }, { status: 502 })
+
+    const tr = await fetch('https://api.paystack.co/transfer', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${PS_KEY}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recipient: recData.data.recipient_code, amount: priceKobo, reason: `FoundaScrow ${reference}` }),
+    })
+    const trData = await tr.json().catch(() => null)
+    if (!tr.ok || !trData?.data) return NextResponse.json({ error: 'Payout failed: ' + (trData?.message || 'unknown') + '. Money remains in vault.' }, { status: 502 })
+
+    await prisma.escrow.update({
+      where: { id: escrow.id },
+      data: { status: 'released', releasedAt: new Date(), metadata: { ...meta, payout: { ...payout, transferRef: trData.data.transfer_code || trData.data.id, paidAt: new Date().toISOString() } } },
+    })
+    return NextResponse.json({ success: true, transfer: trData.data.transfer_code || trData.data.id })
   } catch (e: any) {
     return NextResponse.json({ error: e.message || 'Release failed' }, { status: 500 })
   }

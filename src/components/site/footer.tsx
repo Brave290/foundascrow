@@ -1,3 +1,6 @@
+'use client'
+
+import { usePathname } from 'next/navigation'
 import Link from 'next/link'
 
 const product = [
@@ -17,6 +20,9 @@ const legal = [
 ]
 
 export function Footer() {
+  const pathname = usePathname()
+  if (pathname !== '/') return null
+
   return (
     <footer className="mt-20 border-t border-border bg-card/40">
       <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6">
